@@ -9,6 +9,6 @@ eval_results/
 eval_data/
 *.egg-info/
 .env
-data
 .claude
 .langgraph_api
+/data/
