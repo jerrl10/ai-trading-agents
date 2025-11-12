@@ -1,0 +1,6 @@
+{
+  "graphs": {
+    "graph_app": "tradingagents.langgraph.runner_langgraph:graph_app"
+  },
+  "dependencies": ["openai"]
+}

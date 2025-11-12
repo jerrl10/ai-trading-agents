@@ -1,0 +1,73 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	Seed(Seed)
+	MarketMapper(MarketMapper)
+	FundamentalsMapper(FundamentalsMapper)
+	NewsMapper(NewsMapper)
+	PolicyMapper(PolicyMapper)
+	MacroMapper(MacroMapper)
+	EvidenceHub(EvidenceHub)
+	technical(technical)
+	valuation(valuation)
+	event(event)
+	macro(macro)
+	flow(flow)
+	AnalystHub(AnalystHub)
+	BullResearcher(BullResearcher)
+	BearResearcher(BearResearcher)
+	ResearchDebateHub(ResearchDebateHub)
+	ResearchReferee(ResearchReferee)
+	ConsensusHub(ConsensusHub)
+	RiskManager(RiskManager)
+	RiskHub(RiskHub)
+	Trader(Trader)
+	TraderHub(TraderHub)
+	RiskJudge(RiskJudge)
+	OversightHub(OversightHub)
+	FinalizeDecision(FinalizeDecision)
+	Consolidate(Consolidate)
+	__end__([<p>__end__</p>]):::last
+	AnalystHub --> BearResearcher;
+	AnalystHub --> BullResearcher;
+	BearResearcher --> ResearchDebateHub;
+	BullResearcher --> ResearchDebateHub;
+	ConsensusHub --> RiskManager;
+	EvidenceHub --> event;
+	EvidenceHub --> flow;
+	EvidenceHub --> macro;
+	EvidenceHub --> technical;
+	EvidenceHub --> valuation;
+	FinalizeDecision --> Consolidate;
+	FundamentalsMapper --> EvidenceHub;
+	MacroMapper --> EvidenceHub;
+	MarketMapper --> EvidenceHub;
+	NewsMapper --> EvidenceHub;
+	OversightHub --> FinalizeDecision;
+	PolicyMapper --> EvidenceHub;
+	ResearchDebateHub --> ResearchReferee;
+	ResearchReferee --> ConsensusHub;
+	RiskHub --> Trader;
+	RiskJudge --> OversightHub;
+	RiskManager --> RiskHub;
+	Seed --> FundamentalsMapper;
+	Seed --> MacroMapper;
+	Seed --> MarketMapper;
+	Seed --> NewsMapper;
+	Seed --> PolicyMapper;
+	Trader --> TraderHub;
+	TraderHub --> RiskJudge;
+	__start__ --> Seed;
+	event --> AnalystHub;
+	flow --> AnalystHub;
+	macro --> AnalystHub;
+	technical --> AnalystHub;
+	valuation --> AnalystHub;
+	Consolidate --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

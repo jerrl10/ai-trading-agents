@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "tradingagents"
+version = "0.1.0"
+description = "Multi-agent trading framework (FastAPI + FastMCP)"
+authors = ["jerryliu99se@gmail.com"]
+readme = "README.md"
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "3.12.3"
+fastapi = "*"
+uvicorn = "*"
+pydantic = "*"
+requests = "*"
+python-dotenv = "*"
+openai = "*"
+tenacity = "*"
+yfinance = "*"
+pandas = "*"
+numpy = "*"
+ta = "*"
+scipy = "*"
+streamlit = "^1.51.0"
+plotly = "^6.4.0"
+langgraph = "^1.0.3"
+langchain-core = "^1.0.4"
+langgraph-cli = {version = "0.4.7", extras = ["inmem"]}
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+httpx = "*"
+debugpy = "^1.8.17"
