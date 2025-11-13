@@ -1,30 +1,35 @@
 from __future__ import annotations
-from typing import Any, Dict, Iterable, Mapping
-import asyncio
-from datetime import date
-import os
 
-from langgraph.graph import StateGraph, END, START
-from tradingagents.langgraph.state import GraphState
+import asyncio
+import os
+from datetime import date
+from typing import Any, Dict, Iterable, Mapping
+
+from langgraph.graph import END, START, StateGraph
+
+from tradingagents.config.logging_config import get_logger, setup_logging
+from tradingagents.langgraph.builder_consolidate import (
+    consolidate_state,
+    finalize_decision,
+)
 
 # import existing persona nodes (they’re already callable)
 from tradingagents.langgraph.personas.data_agents import (
-    MarketMapper,
     FundamentalsMapper,
+    MacroMapper,
+    MarketMapper,
     NewsMapper,
     PolicyMapper,
-    MacroMapper,
 )
 from tradingagents.langgraph.personas.domain_analysts import build_domain_analysts
 from tradingagents.langgraph.personas.research_agents import (
-    BullResearcher,
     BearResearcher,
-    ResearchReferee,
+    BullResearcher,
     PersonaConfig,
+    ResearchReferee,
 )
 from tradingagents.langgraph.personas.trader_agents import build_trader_personas
-from tradingagents.config.logging_config import get_logger, setup_logging
-from tradingagents.langgraph.builder_consolidate import consolidate_state, finalize_decision
+from tradingagents.langgraph.state import GraphState
 from tradingagents.utils.step_tracker import StepTracker
 
 setup_logging(os.getenv("LOG_LEVEL", "INFO"))
@@ -196,7 +201,9 @@ async def run_langgraph_pipeline(ticker: str, as_of_date: str) -> Dict[str, Any]
         mermaid = g.draw_mermaid()
         with open("workflow.mmd", "w") as f:
             f.write(mermaid)
-        print("✅ Mermaid diagram saved as workflow.mmd (open it in VS Code with a Mermaid preview plugin or the LangGraph Studio)")
+        print(
+            "✅ Mermaid diagram saved as workflow.mmd (open it in VS Code with a Mermaid preview plugin or the LangGraph Studio)"
+        )
     except Exception as e:
         print(f"⚠️ Could not export Mermaid graph: {e}")
 
@@ -219,7 +226,9 @@ async def run_langgraph_pipeline(ticker: str, as_of_date: str) -> Dict[str, Any]
         if ev_type == "on_chain_end":
             output = event.get("data", {}).get("output")
             if name == "LangGraph":
-                final_state = output.model_dump() if hasattr(output, "model_dump") else output
+                final_state = (
+                    output.model_dump() if hasattr(output, "model_dump") else output
+                )
                 continue
             tracker.record_step(name, output)
             logger.info("✅ %s completed", name)
@@ -240,6 +249,7 @@ graph_app = build_langgraph_pipeline().compile()
 # Standalone run for testing
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+
     async def _demo():
         print("🔧 Building LangGraph pipeline...")
         final_state = await run_langgraph_pipeline("AAPL", date.today().isoformat())

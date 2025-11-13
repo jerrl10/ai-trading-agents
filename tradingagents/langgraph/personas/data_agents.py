@@ -103,17 +103,31 @@ class FundamentalsMapper(BaseMapper):
     def load(self, gs: GraphState, d: date) -> List[SourceObject]:
         fundamentals = fetch_fundamentals(gs.ticker, d)
         items: List[SourceObject] = []
-        for key, value in fundamentals.model_dump().items():
-            if isinstance(value, (int, float)):
-                items.append(
-                    SourceObject(
-                        id=f"ratio:{key}",
-                        type=self.type,
-                        title=f"{key}={value}",
-                        content=f"{key}={value}",
-                        meta={"value": value},
-                    )
+
+        # Extract ratios (nested dict)
+        for key, value in fundamentals.ratios.items():
+            items.append(
+                SourceObject(
+                    id=f"ratio:{key}",
+                    type=self.type,
+                    title=f"{key}={value}",
+                    content=f"{key}={value}",
+                    meta={"value": value, "category": "ratio"},
                 )
+            )
+
+        # Extract trends (nested dict)
+        for key, value in fundamentals.trend.items():
+            items.append(
+                SourceObject(
+                    id=f"trend:{key}",
+                    type=self.type,
+                    title=f"{key}={value}",
+                    content=f"{key}={value}",
+                    meta={"value": value, "category": "trend"},
+                )
+            )
+
         return items
 
 
