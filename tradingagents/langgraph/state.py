@@ -24,6 +24,10 @@ class GraphState(BaseModel):
     # ---- Inputs (immutable during a run) -----------------------------------
     ticker: str = Field(..., frozen=True)
     as_of_date: str  # ISO date string "YYYY-MM-DD" to avoid tz headaches
+    time_horizon: str = Field(
+        default="medium",
+        description="Trading time horizon: 'short' (days-weeks), 'medium' (1-6 months), 'long' (1+ years)"
+    )
 
     # ---- Raw sources (populated by the data-loading node) ------------------
     # Store as plain dict/list so state is trivially serializable to JSON.
@@ -37,23 +41,24 @@ class GraphState(BaseModel):
     m__market: List[Dict[str, Any]] = Field(default_factory=list)
     m__fundamentals: List[Dict[str, Any]] = Field(default_factory=list)
     m__news: List[Dict[str, Any]] = Field(default_factory=list)
-    m__policy: List[Dict[str, Any]] = Field(default_factory=list)
     m__macro: List[Dict[str, Any]] = Field(default_factory=list)
 
     # ---- Persona outputs (LLM or rule-based summaries) ---------------------
-    # Key by persona name: "analyst", "economist", "policy_expert", "researcher", ...
+    # Key by persona name for analyses dict consolidation
     analyses: Dict[str, Any] = Field(default_factory=dict)
+
+    # Analysis stage personas
     a__TechnicalAnalyst: Dict[str, Any] = Field(default_factory=dict)
-    a__ValuationAnalyst: Dict[str, Any] = Field(default_factory=dict)
-    a__EventAnalyst: Dict[str, Any] = Field(default_factory=dict)
+    a__FundamentalAnalyst: Dict[str, Any] = Field(default_factory=dict)
+    a__SentimentAnalyst: Dict[str, Any] = Field(default_factory=dict)
     a__MacroAnalyst: Dict[str, Any] = Field(default_factory=dict)
     a__FlowAnalyst: Dict[str, Any] = Field(default_factory=dict)
-    a__BullResearcher: Dict[str, Any] = Field(default_factory=dict)
-    a__BearResearcher: Dict[str, Any] = Field(default_factory=dict)
-    a__ResearchReferee: Dict[str, Any] = Field(default_factory=dict)
-    a__RiskManager: Dict[str, Any] = Field(default_factory=dict)
-    a__Trader: Dict[str, Any] = Field(default_factory=dict)
-    a__RiskJudge: Dict[str, Any] = Field(default_factory=dict)
+
+    # Synthesis & execution personas
+    a__Synthesis: Dict[str, Any] = Field(default_factory=dict)
+    a__RiskAssessment: Dict[str, Any] = Field(default_factory=dict)
+    a__ExecutionPlan: Dict[str, Any] = Field(default_factory=dict)
+    a__FinalOversight: Dict[str, Any] = Field(default_factory=dict)
 
     # ---- Aggregation & final action ----------------------------------------
     research_view: Dict[str, Any] = Field(default_factory=dict)  # synthesized thesis, confidence, key drivers

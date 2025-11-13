@@ -23,6 +23,36 @@ def _analyst_digest(gs: GraphState) -> str:
 
 
 # ──────────────────────────────────────────────────────────────
+# Synthesis Persona (Replaces Bull/Bear/Referee debate)
+# ──────────────────────────────────────────────────────────────
+
+class Synthesis(BasePersona):
+    """
+    Synthesizes all domain analyst outputs into a coherent investment thesis.
+    Weights technical, fundamental, sentiment, macro, and flow perspectives to
+    produce a balanced view with confidence and stance.
+    """
+    def render_user_prompt(self, gs: GraphState, context: Optional[Dict[str, Any]] = None) -> str:
+        digest = _analyst_digest(gs)
+
+        horizon_focus = {
+            "short": "Prioritize technical and sentiment signals for near-term price action.",
+            "medium": "Balance fundamental valuation with technical trends and sentiment over 1-6 months.",
+            "long": "Focus on fundamental moats, structural trends, and long-term macro environment."
+        }.get(gs.time_horizon, "")
+
+        return (
+            f"You are a senior Research Strategist synthesizing multi-disciplinary analysis for {gs.ticker}.\n"
+            f"As of {gs.as_of_date}, Time Horizon: {gs.time_horizon.upper()}\n"
+            f"{horizon_focus}\n\n"
+            f"Analyst Inputs:\n{digest}\n\n"
+            "Synthesize these views into a coherent thesis. Weigh each analyst's input by their confidence and relevance to the time horizon. "
+            "Produce a final stance (bullish/neutral/bearish), stance_score (-1 to +1), overall confidence (0-1), "
+            "and a concise summary with 3-5 key drivers. Include evidence_refs from analysts."
+        )
+
+
+# ──────────────────────────────────────────────────────────────
 # Bull and Bear researchers
 # ──────────────────────────────────────────────────────────────
 

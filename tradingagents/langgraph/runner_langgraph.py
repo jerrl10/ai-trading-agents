@@ -13,22 +13,19 @@ from tradingagents.langgraph.builder_consolidate import (
     finalize_decision,
 )
 
-# import existing persona nodes (they’re already callable)
+# import existing persona nodes (they're already callable)
 from tradingagents.langgraph.personas.data_agents import (
     FundamentalsMapper,
     MacroMapper,
     MarketMapper,
     NewsMapper,
-    PolicyMapper,
 )
 from tradingagents.langgraph.personas.domain_analysts import build_domain_analysts
 from tradingagents.langgraph.personas.research_agents import (
-    BearResearcher,
-    BullResearcher,
     PersonaConfig,
-    ResearchReferee,
+    Synthesis,
 )
-from tradingagents.langgraph.personas.trader_agents import build_trader_personas
+from tradingagents.langgraph.personas.trader_agents import build_execution_personas
 from tradingagents.langgraph.state import GraphState
 from tradingagents.utils.step_tracker import StepTracker
 
@@ -77,109 +74,86 @@ def _fanout_stage(
 
 
 def build_langgraph_pipeline() -> StateGraph:
-    """Compose the institutional-grade trading workflow."""
+    """
+    Optimized institutional-grade trading workflow.
+
+    Flow: Seed → DataCollection → Analysis → Synthesis → RiskAssessment →
+          ExecutionPlan → FinalOversight → FinalizeDecision → Consolidate → End
+
+    Key improvements:
+    - Consolidated PolicyMapper into NewsMapper
+    - Replaced Bull/Bear/Referee debate with single Synthesis node
+    - Sequential risk → execution → oversight flow (cleaner than separate hubs)
+    - Time-horizon aware at every stage
+    """
     g = StateGraph(GraphState)
 
     def seed_fn(state: Dict[str, Any]) -> Dict[str, Any]:
-        """Prime the graph with an empty delta to avoid key collisions."""
+        """Initialize empty state to avoid key collisions."""
         return {}
 
     g.add_node("Seed", seed_fn)
     g.add_edge(START, "Seed")
 
-    # Stage 1: Evidence ingestion (markets, fundamentals, news, policy, macro).
-    evidence_stage = _fanout_stage(
+    # Stage 1: Data Collection (parallel mappers)
+    # Returns: DataCollectionHub (with consolidated mapper outputs)
+    data_stage_hub = _fanout_stage(
         graph=g,
         upstreams=["Seed"],
-        stage_label="Evidence",
+        stage_label="DataCollection",
         nodes={
             "MarketMapper": MarketMapper(),
             "FundamentalsMapper": FundamentalsMapper(),
-            "NewsMapper": NewsMapper(),
-            "PolicyMapper": PolicyMapper(),
+            "NewsMapper": NewsMapper(),  # Now includes policy news
             "MacroMapper": MacroMapper(),
         },
     )
 
-    # Stage 2: Domain specialists digest the evidence.
+    # Stage 2: Analysis (parallel domain analysts)
+    # Returns: AnalysisHub (with consolidated analyst outputs)
     analysts = build_domain_analysts()
-    analyst_stage = _fanout_stage(
+    analysis_stage_hub = _fanout_stage(
         graph=g,
-        upstreams=[evidence_stage],
-        stage_label="Analyst",
+        upstreams=[data_stage_hub],
+        stage_label="Analysis",
         nodes={
-            "technical": analysts["technical"],
-            "valuation": analysts["valuation"],
-            "event": analysts["event"],
-            "macro": analysts["macro"],
-            "flow": analysts["flow"],
+            "TechnicalAnalyst": analysts["technical"],
+            "FundamentalAnalyst": analysts["fundamental"],
+            "SentimentAnalyst": analysts["sentiment"],
+            "MacroAnalyst": analysts["macro"],
+            "FlowAnalyst": analysts["flow"],
         },
     )
 
-    # Stage 3: Debate between bullish and bearish research leads.
-    debate_stage = _fanout_stage(
-        graph=g,
-        upstreams=[analyst_stage],
-        stage_label="ResearchDebate",
-        nodes={
-            "BullResearcher": BullResearcher(
-                PersonaConfig(
-                    name="BullResearcher",
-                    system_prompt_path="bull_researcher.txt",
-                    max_tokens=500,
-                )
-            ),
-            "BearResearcher": BearResearcher(
-                PersonaConfig(
-                    name="BearResearcher",
-                    system_prompt_path="bear_researcher.txt",
-                    max_tokens=500,
-                )
-            ),
-        },
+    # Stage 3: Synthesis (replaces 3-node debate with single synthesis)
+    synthesis_node = Synthesis(
+        PersonaConfig(
+            name="Synthesis",
+            system_prompt_path="synthesis.txt",
+            max_tokens=600,
+            temperature=0.2,
+        )
     )
+    g.add_node("Synthesis", synthesis_node)
+    g.add_edge(analysis_stage_hub, "Synthesis")
 
-    # Stage 4: A neutral referee synthesizes the debate into a consensus view.
-    consensus_stage = _fanout_stage(
-        graph=g,
-        upstreams=[debate_stage],
-        stage_label="Consensus",
-        nodes={
-            "ResearchReferee": ResearchReferee(
-                PersonaConfig(
-                    name="ResearchReferee",
-                    system_prompt_path="research_referee.txt",
-                    max_tokens=500,
-                )
-            )
-        },
-    )
+    # Stage 4-6: Execution Pipeline (sequential: risk → plan → oversight)
+    execution = build_execution_personas()
 
-    # Stage 5: Risk, execution, and oversight.
-    traders = build_trader_personas()
-    risk_stage = _fanout_stage(
-        graph=g,
-        upstreams=[consensus_stage],
-        stage_label="Risk",
-        nodes={"RiskManager": traders["RiskManager"]},
-    )
-    trader_stage = _fanout_stage(
-        graph=g,
-        upstreams=[risk_stage],
-        stage_label="Trader",
-        nodes={"Trader": traders["Trader"]},
-    )
-    oversight_stage = _fanout_stage(
-        graph=g,
-        upstreams=[trader_stage],
-        stage_label="Oversight",
-        nodes={"RiskJudge": traders["RiskJudge"]},
-    )
+    g.add_node("RiskAssessment", execution["RiskAssessment"])
+    g.add_edge("Synthesis", "RiskAssessment")
 
-    # Decision desk: convert oversight output into a canonical decision payload.
+    g.add_node("ExecutionPlan", execution["ExecutionPlan"])
+    g.add_edge("RiskAssessment", "ExecutionPlan")
+
+    g.add_node("FinalOversight", execution["FinalOversight"])
+    g.add_edge("ExecutionPlan", "FinalOversight")
+
+    # Stage 7: Finalize Decision (canonical decision payload)
     g.add_node("FinalizeDecision", finalize_decision)
-    g.add_edge(oversight_stage, "FinalizeDecision")
+    g.add_edge("FinalOversight", "FinalizeDecision")
 
+    # Stage 8: Final Consolidate
     g.add_node("Consolidate", consolidate_state)
     g.add_edge("FinalizeDecision", "Consolidate")
 
@@ -187,11 +161,18 @@ def build_langgraph_pipeline() -> StateGraph:
     return g
 
 
-async def run_langgraph_pipeline(ticker: str, as_of_date: str) -> Dict[str, Any]:
-    """Run LangGraph workflow with visualization + per-step tracking."""
-    print(f"🚀 Starting LangGraph analysis for {ticker} @ {as_of_date}")
+async def run_langgraph_pipeline(ticker: str, as_of_date: str, time_horizon: str = "medium") -> Dict[str, Any]:
+    """
+    Run optimized LangGraph workflow with visualization + per-step tracking.
 
-    logger.info("🧠 Building LangGraph pipeline...")
+    Args:
+        ticker: Stock ticker symbol (e.g., "AAPL")
+        as_of_date: Analysis date in ISO format (e.g., "2025-01-15")
+        time_horizon: Trading horizon - "short" (days-weeks), "medium" (1-6 months), "long" (1+ years)
+    """
+    print(f"🚀 Starting LangGraph analysis for {ticker} @ {as_of_date} (horizon: {time_horizon.upper()})")
+
+    logger.info("🧠 Building optimized LangGraph pipeline...")
     graph = build_langgraph_pipeline()
     app = graph.compile()
     logger.info("🧱 Graph compiled.")
@@ -207,8 +188,8 @@ async def run_langgraph_pipeline(ticker: str, as_of_date: str) -> Dict[str, Any]
     except Exception as e:
         print(f"⚠️ Could not export Mermaid graph: {e}")
 
-    initial_state = GraphState(ticker=ticker, as_of_date=as_of_date).model_dump()
-    logger.info("📥 Initial state prepared for %s @ %s", ticker, as_of_date)
+    initial_state = GraphState(ticker=ticker, as_of_date=as_of_date, time_horizon=time_horizon).model_dump()
+    logger.info("📥 Initial state prepared for %s @ %s (horizon: %s)", ticker, as_of_date, time_horizon)
 
     tracker = StepTracker(ticker, as_of_date)
     final_state: Dict[str, Any] | None = None
@@ -216,6 +197,7 @@ async def run_langgraph_pipeline(ticker: str, as_of_date: str) -> Dict[str, Any]
     async for event in app.astream_events(initial_state, version="v2"):
         name = event.get("name")
         ev_type = event.get("event")
+        print(f"even name:{name}, ev_type: {ev_type}")
         if not name or not ev_type.startswith("on_chain_"):
             continue
 

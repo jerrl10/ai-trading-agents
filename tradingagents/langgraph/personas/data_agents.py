@@ -135,10 +135,14 @@ class NewsMapper(BaseMapper):
     type = "news"
 
     def load(self, gs: GraphState, d: date) -> List[SourceObject]:
-        news_items = fetch_news_general(gs.ticker, d)
+        """
+        Consolidated news mapper: fetches both ticker-specific news and policy/macro news.
+        """
         out: List[SourceObject] = []
+
+        # Fetch ticker-specific news
+        news_items = fetch_news_general(gs.ticker, d)
         for i, n in enumerate(news_items[:10]):
-            # NewsItem has: headline, summary, published_at, source, url, sentiment
             out.append(
                 SourceObject(
                     id=f"news:{i}",
@@ -147,20 +151,13 @@ class NewsMapper(BaseMapper):
                     content=n.summary,
                     url=n.url,
                     published_at=str(n.published_at) if n.published_at else None,
-                    meta=n.model_dump(),
+                    meta={**n.model_dump(), "category": "ticker_news"},
                 )
             )
-        return out
 
-
-class PolicyMapper(BaseMapper):
-    type = "policy"
-
-    def load(self, gs: GraphState, d: date) -> List[SourceObject]:
-        news_items = fetch_policy_news_us(d)
-        out: List[SourceObject] = []
-        for i, n in enumerate(news_items[:10]):
-            # NewsItem has: headline, summary, published_at, source, url, sentiment
+        # Fetch policy/regulatory news
+        policy_items = fetch_policy_news_us(d)
+        for i, n in enumerate(policy_items[:10]):
             out.append(
                 SourceObject(
                     id=f"policy:{i}",
@@ -169,9 +166,10 @@ class PolicyMapper(BaseMapper):
                     content=n.summary,
                     url=n.url,
                     published_at=str(n.published_at) if n.published_at else None,
-                    meta=n.model_dump(),
+                    meta={**n.model_dump(), "category": "policy_news"},
                 )
             )
+
         return out
 
 
@@ -236,7 +234,6 @@ def run_all_mappers(state: Dict[str, Any]) -> Dict[str, Any]:
         MarketMapper(),
         FundamentalsMapper(),
         NewsMapper(),
-        PolicyMapper(),
         MacroMapper(),
     ]:
         outputs.update(mapper(gs.model_dump()))

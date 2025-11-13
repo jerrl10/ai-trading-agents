@@ -1,0 +1,55 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	Seed(Seed)
+	MarketMapper(MarketMapper)
+	FundamentalsMapper(FundamentalsMapper)
+	NewsMapper(NewsMapper)
+	MacroMapper(MacroMapper)
+	DataCollectionHub(DataCollectionHub)
+	TechnicalAnalyst(TechnicalAnalyst)
+	FundamentalAnalyst(FundamentalAnalyst)
+	SentimentAnalyst(SentimentAnalyst)
+	MacroAnalyst(MacroAnalyst)
+	FlowAnalyst(FlowAnalyst)
+	AnalysisHub(AnalysisHub)
+	Synthesis(Synthesis)
+	RiskAssessment(RiskAssessment)
+	ExecutionPlan(ExecutionPlan)
+	FinalOversight(FinalOversight)
+	FinalizeDecision(FinalizeDecision)
+	Consolidate(Consolidate)
+	__end__([<p>__end__</p>]):::last
+	AnalysisHub --> Synthesis;
+	DataCollectionHub --> FlowAnalyst;
+	DataCollectionHub --> FundamentalAnalyst;
+	DataCollectionHub --> MacroAnalyst;
+	DataCollectionHub --> SentimentAnalyst;
+	DataCollectionHub --> TechnicalAnalyst;
+	ExecutionPlan --> FinalOversight;
+	FinalOversight --> FinalizeDecision;
+	FinalizeDecision --> Consolidate;
+	FlowAnalyst --> AnalysisHub;
+	FundamentalAnalyst --> AnalysisHub;
+	FundamentalsMapper --> DataCollectionHub;
+	MacroAnalyst --> AnalysisHub;
+	MacroMapper --> DataCollectionHub;
+	MarketMapper --> DataCollectionHub;
+	NewsMapper --> DataCollectionHub;
+	RiskAssessment --> ExecutionPlan;
+	Seed --> FundamentalsMapper;
+	Seed --> MacroMapper;
+	Seed --> MarketMapper;
+	Seed --> NewsMapper;
+	SentimentAnalyst --> AnalysisHub;
+	Synthesis --> RiskAssessment;
+	TechnicalAnalyst --> AnalysisHub;
+	__start__ --> Seed;
+	Consolidate --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

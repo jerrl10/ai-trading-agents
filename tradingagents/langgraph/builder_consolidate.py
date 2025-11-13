@@ -50,33 +50,35 @@ def consolidate_state(state: Union[Dict[str, Any], GraphState]) -> Dict[str, Any
 
 def finalize_decision(state: Union[Dict[str, Any], GraphState]) -> Dict[str, Any]:
     """
-    Build a normalized decision payload from the latest governance personas.
+    Build a normalized decision payload from the optimized governance flow.
+    Priority: FinalOversight > ExecutionPlan > Synthesis
     """
     gs = state if isinstance(state, GraphState) else GraphState(**state)
 
     analyses = dict(gs.analyses)
     # Fallback to raw persona payloads when consolidate_state has not run yet.
-    for key in ["TechnicalAnalyst", "ValuationAnalyst", "EventAnalyst", "MacroAnalyst", "FlowAnalyst",
-                "BullResearcher", "BearResearcher", "ResearchReferee", "RiskManager", "Trader", "RiskJudge"]:
+    for key in ["TechnicalAnalyst", "FundamentalAnalyst", "SentimentAnalyst", "MacroAnalyst", "FlowAnalyst",
+                "Synthesis", "RiskAssessment", "ExecutionPlan", "FinalOversight"]:
         raw_key = f"a__{key}"
         if key not in analyses and hasattr(gs, raw_key):
             data = getattr(gs, raw_key)
             if data:
                 analyses[key] = data
 
-    risk_judge = analyses.get("RiskJudge") or {}
-    trader = analyses.get("Trader") or {}
-    referee = analyses.get("ResearchReferee") or {}
+    oversight = analyses.get("FinalOversight") or {}
+    execution = analyses.get("ExecutionPlan") or {}
+    synthesis = analyses.get("Synthesis") or {}
 
-    source = risk_judge or trader or referee
+    source = oversight or execution or synthesis
 
     decision = {
         "ticker": gs.ticker,
+        "time_horizon": gs.time_horizon,
         "stance": source.get("stance", "neutral"),
-        "decision": source.get("final_action") or source.get("decision", "hold"),
+        "decision": source.get("final_action") or source.get("action") or source.get("decision", "hold"),
         "rationale": source.get("rationale") or source.get("summary", ""),
-        "confidence": source.get("confidence", referee.get("confidence", 0.0)),
-        "source_persona": "RiskJudge" if risk_judge else "Trader" if trader else "ResearchReferee",
+        "confidence": source.get("confidence", 0.0),
+        "source_persona": "FinalOversight" if oversight else "ExecutionPlan" if execution else "Synthesis",
     }
 
     return {"decision": decision}

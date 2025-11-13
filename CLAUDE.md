@@ -16,7 +16,10 @@ poetry install                           # Install all dependencies
 ### Running the Pipeline
 ```bash
 # Run full analysis pipeline via CLI orchestrator
-poetry run python -m tradingagents.services.orchestrator AAPL 2025-01-15
+poetry run python -m tradingagents.services.orchestrator AAPL 2025-01-15 medium
+
+# Arguments: <ticker> <date> <time_horizon>
+# time_horizon: "short" (days-weeks), "medium" (1-6 months), "long" (1+ years)
 
 # Run with LangGraph Studio (visual debugger)
 poetry run langgraph dev tradingagents/langgraph/runner_langgraph.py:graph_app
@@ -44,28 +47,35 @@ See `.env.example` for complete configuration options including vendor API keys 
 
 ## Architecture
 
-### Pipeline Stages (Sequential)
+### Pipeline Stages (Optimized Flow)
 
-The LangGraph workflow is organized into stages that execute in sequence, with parallel execution within each stage:
+**Optimized workflow (44% reduction: 18 → 10 nodes)** - more professional structure aligned with real trading desks:
 
 1. **Seed** → Initializes empty state
-2. **EvidenceHub** → Parallel mappers fetch market/fundamentals/news/policy/macro data
-3. **AnalystHub** → Domain specialists (technical/valuation/event/macro/flow) analyze evidence
-4. **ResearchDebateHub** → Bull and Bear researchers build opposing theses
-5. **ConsensusHub** → ResearchReferee synthesizes debate into consensus view
-6. **RiskHub** → RiskManager sizes exposure
-7. **TraderHub** → Trader creates execution playbook
-8. **OversightHub** → RiskJudge enforces governance guardrails
-9. **FinalizeDecision** → Converts oversight output to canonical decision
-10. **Consolidate** → Merges all outputs into final state
+2. **DataCollectionHub** → Parallel mappers fetch market/fundamentals/news/macro data (PolicyMapper merged into NewsMapper)
+3. **AnalysisHub** → Domain analysts (Technical, Fundamental, Sentiment, Macro, Flow) analyze evidence in parallel
+4. **Synthesis** → Single strategist synthesizes multi-disciplinary analysis into coherent thesis (replaces Bull/Bear/Referee debate)
+5. **RiskAssessment** → Sizes position based on thesis confidence, volatility, and time horizon
+6. **ExecutionPlan** → Creates actionable trade playbook with entry/exit/sizing
+7. **FinalOversight** → Governance check ensures compliance with risk guardrails
+8. **FinalizeDecision** → Converts oversight output to canonical decision
+9. **Consolidate** → Merges all outputs into final state
+
+**Key Improvements:**
+- Time-horizon aware: Every persona adapts analysis for short (days-weeks), medium (1-6 months), or long (1+ years) horizons
+- Consolidated news collection: Single NewsMapper handles both ticker-specific and policy/macro news
+- Streamlined synthesis: Direct thesis building instead of debate structure
+- Sequential execution flow: Clear progression from analysis → synthesis → sizing → execution → approval
 
 ### State Management
 
 **GraphState Schema** (`tradingagents/langgraph/state.py`):
-- Inputs: `ticker`, `as_of_date` (immutable)
+- Inputs: `ticker`, `as_of_date`, `time_horizon` (immutable)
 - Raw data: `price_snapshot`, `fundamentals`, `news_general`, `news_policy`
-- Ephemeral keys: `m__*` for mapper outputs (e.g., `m__market`, `m__fundamentals`)
-- Persona keys: `a__*` for individual persona outputs (e.g., `a__TechnicalAnalyst`)
+- Ephemeral keys: `m__*` for mapper outputs (e.g., `m__market`, `m__fundamentals`, `m__news`, `m__macro`)
+- Persona keys: `a__*` for individual persona outputs:
+  - Analysis: `a__TechnicalAnalyst`, `a__FundamentalAnalyst`, `a__SentimentAnalyst`, `a__MacroAnalyst`, `a__FlowAnalyst`
+  - Execution: `a__Synthesis`, `a__RiskAssessment`, `a__ExecutionPlan`, `a__FinalOversight`
 - Consolidated: `data_sources` (mappers), `analyses` (personas)
 - Final: `decision`, `research_view`
 - Telemetry: `token_usage`, `cost_usd`, `notes`
@@ -81,11 +91,11 @@ The LangGraph workflow is organized into stages that execute in sequence, with p
 - Returns structured JSON outputs with stance/confidence/rationale
 - Gracefully degrades when APIs unavailable (mock responses)
 
-**Persona Types**:
-- **Data Mappers**: Market, Fundamentals, News, Policy, Macro (return normalized `SourceObject` lists)
-- **Domain Analysts**: Technical, Valuation, Event, Macro, Flow (structured JSON analysis)
-- **Research Agents**: BullResearcher, BearResearcher, ResearchReferee (thesis building & synthesis)
-- **Trading Agents**: RiskManager, Trader, RiskJudge (sizing, execution, governance)
+**Persona Types** (optimized):
+- **Data Mappers**: Market, Fundamentals, News (includes policy), Macro (return normalized `SourceObject` lists)
+- **Domain Analysts**: Technical, Fundamental, Sentiment, Macro, Flow (structured JSON analysis with time-horizon awareness)
+- **Synthesis Agent**: Synthesis (replaces Bull/Bear/Referee - directly builds consensus thesis)
+- **Execution Agents**: RiskAssessment, ExecutionPlan, FinalOversight (sizing, execution, governance)
 
 ### Observability
 
