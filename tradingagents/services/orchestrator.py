@@ -76,6 +76,9 @@ class OrchestratorService:
         decision = result.get("decision", {})
         analyses = result.get("analyses", {})
         data_sources = result.get("data_sources", {})
+        token_usage = result.get("token_usage", {})
+        cost_usd = result.get("cost_usd", 0.0)
+        notes = result.get("notes", [])
 
         decision_text = f"{decision.get('decision', 'N/A')} ({decision.get('stance', 'neutral')})"
         logger.info(f"✅ Final decision for {ticker}: {decision_text}")
@@ -88,6 +91,9 @@ class OrchestratorService:
             "decision": decision,
             "analyses": analyses,
             "data_sources": data_sources,
+            "token_usage": token_usage,
+            "cost_usd": cost_usd,
+            "notes": notes,
         }
 
         # ─────────────────────────────────────────────

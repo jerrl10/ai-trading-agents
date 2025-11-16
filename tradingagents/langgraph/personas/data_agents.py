@@ -142,10 +142,15 @@ class NewsMapper(BaseMapper):
 
         # Fetch ticker-specific news
         news_items = fetch_news_general(gs.ticker, d)
+        ticker_count = 0
         for i, n in enumerate(news_items[:10]):
+            # Skip placeholder/error items
+            if n.headline in ["No news found", "AlphaVantage API error"]:
+                continue
+
             out.append(
                 SourceObject(
-                    id=f"news:{i}",
+                    id=f"news:{ticker_count}",
                     type=self.type,
                     title=n.headline,
                     content=n.summary,
@@ -154,19 +159,36 @@ class NewsMapper(BaseMapper):
                     meta={**n.model_dump(), "category": "ticker_news"},
                 )
             )
+            ticker_count += 1
 
-        # Fetch policy/regulatory news
+        # Fetch policy/regulatory news (market-relevant only)
         policy_items = fetch_policy_news_us(d)
+        policy_count = 0
         for i, n in enumerate(policy_items[:10]):
             out.append(
                 SourceObject(
-                    id=f"policy:{i}",
+                    id=f"policy:{policy_count}",
                     type=self.type,
                     title=n.headline,
                     content=n.summary,
                     url=n.url,
                     published_at=str(n.published_at) if n.published_at else None,
                     meta={**n.model_dump(), "category": "policy_news"},
+                )
+            )
+            policy_count += 1
+
+        # If no news at all, add a single placeholder to indicate no relevant news was found
+        if not out:
+            out.append(
+                SourceObject(
+                    id="news:0",
+                    type=self.type,
+                    title=f"No recent news found for {gs.ticker}",
+                    content=f"No ticker-specific or relevant market news found in the last {DEFAULT_CONFIG['research']['news_window_days']} days.",
+                    url="",
+                    published_at=str(d),
+                    meta={"category": "system", "note": "No news available"},
                 )
             )
 

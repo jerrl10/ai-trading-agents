@@ -36,15 +36,26 @@ class AlphaVantageNewsClient:
             return {"feed": []}
         return data
 
-    def fetch_news(self, ticker: str, *, start: date, end: date, limit: int = 50) -> List[Dict[str, Any]]:
-        raw = self._call(
-            {
-                "function": "NEWS_SENTIMENT",
-                "tickers": ticker,
-                "from": start.isoformat(),
-                "to": end.isoformat(),
-            }
-        )
+    def fetch_news(self, ticker: str, *, start: date, end: date, limit: int = 50, topics: str = None) -> List[Dict[str, Any]]:
+        """
+        Fetch news for a ticker with optional topic filtering.
+
+        topics: Comma-separated list like "earnings,financial_markets,finance,technology"
+        """
+        params = {
+            "function": "NEWS_SENTIMENT",
+            "tickers": ticker,
+            "time_from": start.strftime("%Y%m%dT%H%M"),  # Alpha Vantage format: YYYYMMDDTHHMM
+            "time_to": end.strftime("%Y%m%dT%H%M"),
+            "limit": min(limit, 1000),  # API max is 1000
+            "sort": "LATEST",  # Get most recent first
+        }
+
+        # Add topic filter for more relevant results
+        if topics:
+            params["topics"] = topics
+
+        raw = self._call(params)
         return raw.get("feed", [])[:limit]
 
 
@@ -60,12 +71,32 @@ class NewsGeneralAdapter:
     def fetch(self, ticker: str, as_of_date: date) -> List[NewsItem]:
         start_date = as_of_date - timedelta(days=self.window_days)
         try:
-            raw_items = self.client.fetch_news(ticker, start=start_date, end=as_of_date)
+            # Use topic filtering for more relevant financial news
+            raw_items = self.client.fetch_news(
+                ticker,
+                start=start_date,
+                end=as_of_date,
+                topics="earnings,financial_markets,finance,technology,economy_fiscal,economy_monetary,ipo,mergers_and_acquisitions"
+            )
+
+            if not raw_items:
+                # Try without topic filter as fallback
+                raw_items = self.client.fetch_news(ticker, start=start_date, end=as_of_date)
+
             parsed = [self._parse_item(rec) for rec in raw_items]
             cleaned = [item for item in parsed if item is not None]
-            return cleaned or [self._no_news_item()]
+
+            # Filter out items with no meaningful content
+            relevant = [
+                item for item in cleaned
+                if item.headline not in ["No news found", "Untitled", "AlphaVantage API error"]
+                and (item.summary and len(item.summary) > 20)
+            ]
+
+            return relevant if relevant else []  # Return empty list instead of placeholder
         except Exception as exc:
-            return [self._error_item(str(exc))]
+            print(f"⚠️ Alpha Vantage news fetch failed for {ticker}: {exc}")
+            return []  # Return empty list on error
 
     # --------------------------------------------------------------------- #
     # Helpers

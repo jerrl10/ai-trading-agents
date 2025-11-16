@@ -9,64 +9,46 @@ graph TD;
 	MarketMapper(MarketMapper)
 	FundamentalsMapper(FundamentalsMapper)
 	NewsMapper(NewsMapper)
-	PolicyMapper(PolicyMapper)
 	MacroMapper(MacroMapper)
-	EvidenceHub(EvidenceHub)
-	technical(technical)
-	valuation(valuation)
-	event(event)
-	macro(macro)
-	flow(flow)
-	AnalystHub(AnalystHub)
-	BullResearcher(BullResearcher)
-	BearResearcher(BearResearcher)
-	ResearchDebateHub(ResearchDebateHub)
-	ResearchReferee(ResearchReferee)
-	ConsensusHub(ConsensusHub)
-	RiskManager(RiskManager)
-	RiskHub(RiskHub)
-	Trader(Trader)
-	TraderHub(TraderHub)
-	RiskJudge(RiskJudge)
-	OversightHub(OversightHub)
+	DataCollectionHub(DataCollectionHub)
+	TechnicalAnalyst(TechnicalAnalyst)
+	FundamentalAnalyst(FundamentalAnalyst)
+	SentimentAnalyst(SentimentAnalyst)
+	MacroAnalyst(MacroAnalyst)
+	FlowAnalyst(FlowAnalyst)
+	AnalysisHub(AnalysisHub)
+	Synthesis(Synthesis)
+	RiskAssessment(RiskAssessment)
+	ExecutionPlan(ExecutionPlan)
+	FinalOversight(FinalOversight)
 	FinalizeDecision(FinalizeDecision)
 	Consolidate(Consolidate)
 	__end__([<p>__end__</p>]):::last
-	AnalystHub --> BearResearcher;
-	AnalystHub --> BullResearcher;
-	BearResearcher --> ResearchDebateHub;
-	BullResearcher --> ResearchDebateHub;
-	ConsensusHub --> RiskManager;
-	EvidenceHub --> event;
-	EvidenceHub --> flow;
-	EvidenceHub --> macro;
-	EvidenceHub --> technical;
-	EvidenceHub --> valuation;
+	AnalysisHub --> Synthesis;
+	DataCollectionHub --> FlowAnalyst;
+	DataCollectionHub --> FundamentalAnalyst;
+	DataCollectionHub --> MacroAnalyst;
+	DataCollectionHub --> SentimentAnalyst;
+	DataCollectionHub --> TechnicalAnalyst;
+	ExecutionPlan --> FinalOversight;
+	FinalOversight --> FinalizeDecision;
 	FinalizeDecision --> Consolidate;
-	FundamentalsMapper --> EvidenceHub;
-	MacroMapper --> EvidenceHub;
-	MarketMapper --> EvidenceHub;
-	NewsMapper --> EvidenceHub;
-	OversightHub --> FinalizeDecision;
-	PolicyMapper --> EvidenceHub;
-	ResearchDebateHub --> ResearchReferee;
-	ResearchReferee --> ConsensusHub;
-	RiskHub --> Trader;
-	RiskJudge --> OversightHub;
-	RiskManager --> RiskHub;
+	FlowAnalyst --> AnalysisHub;
+	FundamentalAnalyst --> AnalysisHub;
+	FundamentalsMapper --> DataCollectionHub;
+	MacroAnalyst --> AnalysisHub;
+	MacroMapper --> DataCollectionHub;
+	MarketMapper --> DataCollectionHub;
+	NewsMapper --> DataCollectionHub;
+	RiskAssessment --> ExecutionPlan;
 	Seed --> FundamentalsMapper;
 	Seed --> MacroMapper;
 	Seed --> MarketMapper;
 	Seed --> NewsMapper;
-	Seed --> PolicyMapper;
-	Trader --> TraderHub;
-	TraderHub --> RiskJudge;
+	SentimentAnalyst --> AnalysisHub;
+	Synthesis --> RiskAssessment;
+	TechnicalAnalyst --> AnalysisHub;
 	__start__ --> Seed;
-	event --> AnalystHub;
-	flow --> AnalystHub;
-	macro --> AnalystHub;
-	technical --> AnalystHub;
-	valuation --> AnalystHub;
 	Consolidate --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0

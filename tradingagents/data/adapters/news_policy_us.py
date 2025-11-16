@@ -45,10 +45,11 @@ class NewsAPIClient:
             raise RuntimeError(f"NewsAPI error: {data.get('message')}")
         return data.get("articles", [])
 
-def fetch_policy_news_us(as_of_date: date, keywords: str = "regulation OR bill OR legislation OR SEC OR Fed") -> List[NewsItem]:
+def fetch_policy_news_us(as_of_date: date, keywords: str = '("Federal Reserve" OR "interest rates" OR "monetary policy" OR "SEC" OR "stock market") AND (regulation OR policy OR economy)') -> List[NewsItem]:
     """
     Adapter to fetch U.S. policy / regulatory news for given date window up to as_of_date.
 
+    Uses targeted keywords to fetch only market-relevant financial/economic policy news.
     Returns list of NewsItem models.
     """
     api_key = get_env_key("NEWSAPI_KEY")
@@ -59,28 +60,48 @@ def fetch_policy_news_us(as_of_date: date, keywords: str = "regulation OR bill O
 
     try:
         raw_articles = client.fetch_policy_news(keywords, from_date, to_date)
+
+        # Filter for financial/market relevance
+        finance_keywords = {
+            'federal reserve', 'fed', 'interest rate', 'monetary policy', 'fiscal policy',
+            'sec', 'securities', 'stock market', 'wall street', 'nasdaq', 'dow jones',
+            'treasury', 'inflation', 'economic', 'gdp', 'unemployment', 'tariff',
+            'trade policy', 'regulation', 'financial', 'banking', 'market', 'economy'
+        }
+
         items: List[NewsItem] = []
         for rec in raw_articles:
-            published_str = rec.get("publishedAt", "")
-            try:
-                published = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
-            except Exception:
-                published = datetime.utcnow()
-            summary = rec.get("description") or rec.get("content") or ""
-            items.append(
-                NewsItem(
-                    headline=rec.get("title", "Untitled policy update"),
-                    summary=summary,
-                    published_at=published,
-                    source=rec.get("source", {}).get("name", "newsapi"),
-                    url=rec.get("url", ""),
-                    sentiment=None,
+            # Check if article is financially relevant
+            title = (rec.get("title") or "").lower()
+            description = (rec.get("description") or "").lower()
+            combined_text = f"{title} {description}"
+
+            # Only include if it contains at least one finance keyword
+            if any(keyword in combined_text for keyword in finance_keywords):
+                published_str = rec.get("publishedAt", "")
+                try:
+                    published = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
+                except Exception:
+                    published = datetime.utcnow()
+                summary = rec.get("description") or rec.get("content") or ""
+                items.append(
+                    NewsItem(
+                        headline=rec.get("title", "Untitled policy update"),
+                        summary=summary,
+                        published_at=published,
+                        source=rec.get("source", {}).get("name", "newsapi"),
+                        url=rec.get("url", ""),
+                        sentiment=None,
+                    )
                 )
-            )
-        return items or _fallback_policy_items("No policy articles returned")
+
+        # Return only top 10 most recent relevant articles
+        items = sorted(items, key=lambda x: x.published_at or datetime.min, reverse=True)[:10]
+
+        return items if items else []  # Return empty list instead of fallback if no relevant news
     except Exception as e:
         logger.warning("⚠️ Policy news fetch failed: %s", e)
-        return _fallback_policy_items(str(e))
+        return []  # Return empty list on error instead of fallback
 
 
 def _fallback_policy_items(message: str) -> List[NewsItem]:
